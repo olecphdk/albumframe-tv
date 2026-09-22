@@ -199,6 +199,7 @@ public final class MainActivity extends Activity {
         photoView = new DemoPhotoView(this);
         photoView.setScene(scene);
         root.addView(photoView, new FrameLayout.LayoutParams(-1, -1));
+        SlideshowDateTimeOverlay.addIfEnabled(root);
         caption = text(UiText.text(MainActivity.this,"Demo album • image ") + (Math.floorMod(scene, 4) + 1) + UiText.text(MainActivity.this," of 4"), 18, Color.WHITE);
         caption.setBackgroundColor(0x66000000);
         caption.setPadding(24, 12, 24, 12);

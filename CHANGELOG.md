@@ -2,6 +2,11 @@
 
 All notable user-visible and security-relevant changes are recorded here.
 
+## 0.7.2 — 2026-09-22
+
+- Show the TV's date and time during slideshows, including the optional screensaver and demo. The clock follows the TV's locale, time zone and 12/24-hour setting.
+- Add a Show date and time option in Settings; it is on by default and can be switched off.
+
 ## 0.7.1 — 2026-09-22
 
 - Fetch sorted album metadata in smaller pages and allow larger bounded Flickr API replies to avoid "Response is too large" on albums with many photos.

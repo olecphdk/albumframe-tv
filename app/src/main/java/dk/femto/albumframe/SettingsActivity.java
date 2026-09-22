@@ -18,7 +18,8 @@ public final class SettingsActivity extends Activity {
     }
     @Override protected void onCreate(Bundle state){super.onCreate(state);showSettings();}
     private void showSettings(){showSettings(false);}
-    private void showSettings(boolean focusPhotoOrder){
+    private void showSettings(boolean focusPhotoOrder){showSettings(focusPhotoOrder,false);}
+    private void showSettings(boolean focusPhotoOrder,boolean focusClock){
         LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setPadding(dp(48),dp(32),dp(48),dp(32));
         TextView title=text(UiText.text(this,"Settings"),30,Color.WHITE);title.setPadding(0,0,0,dp(16));root.addView(title);
         Button back=button(UiText.text(this,"Back"),this::finish);root.addView(back);
@@ -40,6 +41,12 @@ public final class SettingsActivity extends Activity {
         root.addView(button(UiText.text(this,"Time between photos")+": "+seconds+UiText.text(this," seconds"),this::chooseInterval));
         int transition=getSharedPreferences("slideshow",0).getInt("transition_ms",2500);
         root.addView(button(UiText.text(this,"Photo transition")+": "+transitionLabel(transition),this::chooseTransition));
+        boolean showClock=getSharedPreferences("slideshow",0).getBoolean("show_date_time",true);
+        Button clockButton=button(UiText.text(this,"Show date and time")+": "+UiText.text(this,showClock?"On":"Off"),()->{
+            getSharedPreferences("slideshow",0).edit().putBoolean("show_date_time",!showClock).apply();
+            showSettings(false,true);
+        });
+        root.addView(clockButton);
         String language=getSharedPreferences("appearance",0).getString("language","system");
         root.addView(button(UiText.text(this,"Language")+": "+languageLabel(language),this::chooseLanguage));
         if(AppAppearance.hasBackground(this))root.addView(button(UiText.text(this,"Remove background"),()->{
@@ -54,10 +61,10 @@ public final class SettingsActivity extends Activity {
         privacy.setPadding(0,dp(18),0,0);root.addView(privacy);
         TextView attribution=text("This product uses the Flickr API but is not endorsed or certified by SmugMug, Inc.",14,0xFFB9C8C3);
         attribution.setPadding(0,dp(12),0,dp(8));root.addView(attribution);
-        TextView version=text("AlbumFrame TV 0.7.1",14,0xFF83918D);
+        TextView version=text("AlbumFrame TV 0.7.2",14,0xFF83918D);
         version.setPadding(0,0,0,dp(18));root.addView(version);
         ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.addView(root);setContentView(AppAppearance.menu(this,scroll));
-        (focusPhotoOrder?orderButton:back).requestFocus();
+        (focusPhotoOrder?orderButton:focusClock?clockButton:back).requestFocus();
     }
     private void choosePhotoOrder(){
         String current=PhotoOrder.normalize(getSharedPreferences("slideshow",0).getString("photo_order",PhotoOrder.FLICKR));

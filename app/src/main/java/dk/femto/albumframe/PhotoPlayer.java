@@ -54,6 +54,7 @@ final class PhotoPlayer extends FrameLayout {
         },advance,context.getSharedPreferences("slideshow",0).getInt("seconds",4));
         previousImage=imageView(context);addView(previousImage,new FrameLayout.LayoutParams(-1,-1));
         currentImage=imageView(context);addView(currentImage,new FrameLayout.LayoutParams(-1,-1));
+        SlideshowDateTimeOverlay.addIfEnabled(this);
         controls=new TextView(context);controls.setTextColor(Color.WHITE);controls.setTextSize(17);
         controls.setPadding(24,12,24,12);controls.setBackgroundColor(0xB8000000);
         addView(controls,new FrameLayout.LayoutParams(-1,-2,Gravity.BOTTOM));

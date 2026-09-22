@@ -3,6 +3,7 @@ package dk.femto.albumframe;
 import android.os.Handler;
 import android.os.Looper;
 import android.service.dreams.DreamService;
+import android.widget.FrameLayout;
 
 /** Android DreamService entry point. Optional system integration; foreground use does not depend on this. */
 public final class AlbumFrameDreamService extends DreamService {
@@ -29,7 +30,10 @@ public final class AlbumFrameDreamService extends DreamService {
             setContentView(player);player.start();return;
         }
         view = new DemoPhotoView(this);
-        setContentView(view);
+        FrameLayout demo = new FrameLayout(this);
+        demo.addView(view, new FrameLayout.LayoutParams(-1,-1));
+        SlideshowDateTimeOverlay.addIfEnabled(demo);
+        setContentView(demo);
         handler.postDelayed(advance, 8000);
     }
 

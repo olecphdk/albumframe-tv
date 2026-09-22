@@ -1,8 +1,8 @@
-# AlbumFrame TV 0.7.0
+# AlbumFrame TV 0.7.1
 
 Open-source Android TV app for showing Flickr albums, including private photos authorized by the user's account. Package `dk.femto.albumframe`; GPL-3.0-or-later. No tracking, ads or third-party runtime libraries.
 
-Version 0.7.0 adds photo ordering and improved album navigation. The permanent application ID remains `dk.femto.albumframe`; this version installs over 0.6.x without another Flickr login. Builds before 0.6.0 have a different application ID and install separately.
+Version 0.7.1 adds photo ordering and improved album navigation, and fixes large album responses. The permanent application ID remains `dk.femto.albumframe`; this version installs over 0.6.x without another Flickr login. Builds before 0.6.0 have a different application ID and install separately.
 
 Canonical source: <https://github.com/olecphdk/albumframe-tv>
 

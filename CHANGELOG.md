@@ -2,6 +2,10 @@
 
 All notable user-visible and security-relevant changes are recorded here.
 
+## 0.7.1 — 2026-09-22
+
+- Fetch sorted album metadata in smaller pages and allow larger bounded Flickr API replies to avoid "Response is too large" on albums with many photos.
+
 ## 0.7.0 — 2026-09-22
 
 - Keep focus on the most recently opened album after returning from its slideshow.

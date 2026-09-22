@@ -134,11 +134,11 @@ final class PhotoPlayer extends FrameLayout {
     }
     private void loadOrderedPhotos() throws Exception {
         List<JSONObject> photos=new ArrayList<>();
-        JSONObject first=api.photos(albumId,1,500);
+        JSONObject first=api.photos(albumId,1,PAGE_SIZE);
         int pages=first.optInt("pages",1);
         for(int number=1;number<=pages;number++){
             if(Thread.currentThread().isInterrupted())throw new InterruptedException();
-            JSONObject result=number==1?first:api.photos(albumId,number,500);
+            JSONObject result=number==1?first:api.photos(albumId,number,PAGE_SIZE);
             JSONArray pagePhotos=result.getJSONArray("photo");
             for(int offset=0;offset<pagePhotos.length();offset++)photos.add(pagePhotos.getJSONObject(offset));
         }

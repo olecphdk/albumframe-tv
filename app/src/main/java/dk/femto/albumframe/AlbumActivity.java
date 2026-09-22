@@ -15,9 +15,16 @@ public final class AlbumActivity extends Activity {
     private final ExecutorService thumbnailWorker=Executors.newFixedThreadPool(3);
     private FlickrApi api;
     private int generation,page=1;
+    private String selectedAlbumId="";
     private boolean stopped;
     private PhotoPlayer player;
-    @Override public void onCreate(Bundle b) {super.onCreate(b);}
+    @Override public void onCreate(Bundle b) {
+        super.onCreate(b);
+        if(b!=null){page=b.getInt("page",1);selectedAlbumId=b.getString("selectedAlbumId","");}
+    }
+    @Override protected void onSaveInstanceState(Bundle state){
+        state.putInt("page",page);state.putString("selectedAlbumId",selectedAlbumId);super.onSaveInstanceState(state);
+    }
     @Override protected void onStart() {super.onStart();stopped=false;showAlbums(page);}
     private int dp(int n){return Math.round(n*getResources().getDisplayMetrics().density);}
     private Button button(String text,Runnable action) {
@@ -26,7 +33,7 @@ public final class AlbumActivity extends Activity {
         b.setOnClickListener(v->action.run());AppAppearance.styleButton(b);return b;
     }
     private TextView text(String s){TextView t=new TextView(this);t.setText(s);t.setTextSize(20);t.setTextColor(Color.WHITE);return t;}
-    private View albumRow(JSONObject album,String id,String title,int current,boolean first) {
+    private Button albumRow(LinearLayout list,JSONObject album,String id,String title,int current) {
         LinearLayout row=new LinearLayout(this);row.setOrientation(LinearLayout.HORIZONTAL);row.setGravity(Gravity.CENTER_VERTICAL);
         ImageView cover=new ImageView(this);cover.setScaleType(ImageView.ScaleType.CENTER_CROP);cover.setImageResource(dk.femto.albumframe.R.drawable.albumframe_icon);
         LinearLayout.LayoutParams coverParams=new LinearLayout.LayoutParams(dp(120),dp(76));coverParams.setMargins(0,dp(4),dp(14),dp(4));row.addView(cover,coverParams);
@@ -39,7 +46,8 @@ public final class AlbumActivity extends Activity {
                 runOnUiThread(()->{if(stopped || current!=generation)bitmap.recycle();else cover.setImageBitmap(bitmap);});
             }catch(Exception ignored){}
         });
-        if(first)item.requestFocus();return row;
+        list.addView(row);
+        return item;
     }
     private void showAlbums(int requested) {
         if(player!=null){player.close();player=null;}
@@ -60,10 +68,15 @@ public final class AlbumActivity extends Activity {
                     if(stopped || current!=generation)return;
                     status.setText(albums.length()==0?UiText.text(this,"No albums found. Create an album on Flickr first."):UiText.text(this,"Choose with arrows and OK. Photos are shown inside the app."));
                     try {
+                        Button first=null,selected=null;
                         for(int i=0;i<albums.length();i++) {
                             JSONObject a=albums.getJSONObject(i);String id=a.getString("id"),title=a.getJSONObject("title").optString("_content","Album");
-                            list.addView(albumRow(a,id,title,current,i==0));
+                            Button item=albumRow(list,a,id,title,current);
+                            if(first==null)first=item;
+                            if(id.equals(selectedAlbumId))selected=item;
                         }
+                        Button focus=selected!=null?selected:first;
+                        if(focus!=null)focus.post(()->{if(!stopped && current==generation)focus.requestFocus();});
                         if(requested>1) list.addView(button(UiText.text(this,"Previous page"),()->showAlbums(requested-1)));
                         if(requested<result.optInt("pages",1)) list.addView(button(UiText.text(this,"Next page"),()->showAlbums(requested+1)));
                     } catch(JSONException e){status.setText(UiText.text(this,"Could not read the Flickr album list."));}
@@ -73,6 +86,7 @@ public final class AlbumActivity extends Activity {
     }
     private void open(String id,String title) {
         generation++;
+        selectedAlbumId=id;
         getSharedPreferences("album",0).edit().putString("id",id).putString("title",title).apply();
         player=new PhotoPlayer(this,id,title);setContentView(player);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);

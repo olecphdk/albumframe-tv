@@ -2,6 +2,12 @@
 
 All notable user-visible and security-relevant changes are recorded here.
 
+## 0.7.0 — 2026-09-22
+
+- Keep focus on the most recently opened album after returning from its slideshow.
+- Let the user choose Flickr's album order or oldest/newest by capture or upload date for photos, globally in Settings.
+- Put Flickr connection and local-login deletion in Settings. Changing the photo order resets saved slideshow positions.
+
 ## 0.6.1 — 2026-09-21
 
 - Replace the old OpenFrame Albums launcher banner with AlbumFrame TV branding.

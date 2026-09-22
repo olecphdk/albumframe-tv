@@ -25,7 +25,9 @@ final class PhotoPlayer extends FrameLayout {
     private final TextView controls;
     private final SlideshowClock clock;
     private final String albumId,albumTitle;
+    private final String photoOrder;
     private final Map<Integer,JSONObject> pageCache=new HashMap<>();
+    private List<JSONObject> orderedPhotos;
     private FlickrApi api;
     private int total,index,generation,failures;
     private int prefetchedIndex=-1;
@@ -44,6 +46,7 @@ final class PhotoPlayer extends FrameLayout {
     PhotoPlayer(Context context,String albumId,String albumTitle) {
         super(context);this.albumId=albumId;this.albumTitle=albumTitle;
         setBackgroundColor(Color.BLACK);
+        photoOrder=PhotoOrder.normalize(context.getSharedPreferences("slideshow",0).getString("photo_order",PhotoOrder.FLICKR));
         index=Math.max(0,context.getSharedPreferences("positions",0).getInt(albumId,0));
         clock=new SlideshowClock(new SlideshowClock.Scheduler(){
             public void cancel(Runnable runnable){ui.removeCallbacks(runnable);}
@@ -108,6 +111,14 @@ final class PhotoPlayer extends FrameLayout {
     }
     private LoadedPhoto loadPhoto(int requested) throws Exception{
         if(api==null)api=new FlickrApi(getContext());
+        if(!PhotoOrder.FLICKR.equals(photoOrder)){
+            if(orderedPhotos==null)loadOrderedPhotos();
+            int count=orderedPhotos.size();
+            if(count==0)throw new IOException(UiText.text(getContext(),"This album has no photos. Videos are not displayed."));
+            int safeIndex=requested>=count?0:requested;
+            Bitmap bitmap=download(api.imageUrl(orderedPhotos.get(safeIndex)),20*1024*1024,8300000L);
+            return new LoadedPhoto(safeIndex,count,bitmap);
+        }
         int requestedPage=requested/PAGE_SIZE+1;
         JSONObject pageData=page(requestedPage);
         int available=pageData.getInt("total");
@@ -120,6 +131,19 @@ final class PhotoPlayer extends FrameLayout {
         if(offset>=photos.length())throw new IOException(UiText.text(getContext(),"The album has changed. Open it again from the album list."));
         Bitmap bitmap=download(api.imageUrl(photos.getJSONObject(offset)),20*1024*1024,8300000L);
         return new LoadedPhoto(safeIndex,available,bitmap);
+    }
+    private void loadOrderedPhotos() throws Exception {
+        List<JSONObject> photos=new ArrayList<>();
+        JSONObject first=api.photos(albumId,1,500);
+        int pages=first.optInt("pages",1);
+        for(int number=1;number<=pages;number++){
+            if(Thread.currentThread().isInterrupted())throw new InterruptedException();
+            JSONObject result=number==1?first:api.photos(albumId,number,500);
+            JSONArray pagePhotos=result.getJSONArray("photo");
+            for(int offset=0;offset<pagePhotos.length();offset++)photos.add(pagePhotos.getJSONObject(offset));
+        }
+        PhotoOrder.sort(photos,photoOrder);
+        orderedPhotos=photos;
     }
     private JSONObject page(int number) throws Exception{
         JSONObject result=pageCache.get(number);
@@ -207,6 +231,6 @@ final class PhotoPlayer extends FrameLayout {
         clock.close();closed=true;generation++;ui.removeCallbacksAndMessages(null);worker.shutdownNow();
         currentImage.animate().cancel();previousImage.animate().cancel();recyclePrefetch();
         HttpURLConnection current=connection;if(current!=null)current.disconnect();
-        currentImage.setImageDrawable(null);previousImage.setImageDrawable(null);pageCache.clear();
+        currentImage.setImageDrawable(null);previousImage.setImageDrawable(null);pageCache.clear();orderedPhotos=null;
     }
 }

@@ -32,6 +32,9 @@ public final class FlickrTest {
         check("3".equals(p.get("page")) && "100".equals(p.get("per_page")),"photo pagination");
         check(!p.containsKey("privacy_filter") && "photos".equals(p.get("media")),"private images and media");
         check("private-album".equals(p.get("photoset_id")),"album id");
+        check(p.get("extras").contains("date_taken") && p.get("extras").contains("date_upload"),"sorting metadata");
+        api.photos("private-album",2,500);
+        check("500".equals(requests.get(3).get("per_page")) && "2".equals(requests.get(3).get("page")),"sorted album pagination");
         check(api.imageUrl(photos.getJSONArray("photo").getJSONObject(0)).endsWith("/a.jpg"),"direct image");
         check(api.imageUrl(new JSONObject().put("id","1")).endsWith("/large.jpg"),"size fallback");
         for(String url:new String[]{"http://live.staticflickr.com/a","https://staticflickr.com.evil.test/a","https://127.0.0.1/a","https://user@live.staticflickr.com/a","https://live.staticflickr.com:444/a"})

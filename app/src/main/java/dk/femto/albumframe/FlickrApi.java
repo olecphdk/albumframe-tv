@@ -37,9 +37,12 @@ final class FlickrApi {
             "primary_photo_extras","url_q,url_m,url_s,url_t")).getJSONObject("photosets");
     }
     JSONObject photos(String album,int page) throws Exception {
+        return photos(album,page,100);
+    }
+    JSONObject photos(String album,int page,int perPage) throws Exception {
         return call("flickr.photosets.getPhotos",OAuth.params("user_id",owner(),"photoset_id",album,
-            "page",Integer.toString(page),"per_page","100","media","photos",
-            "extras","url_k,url_h,url_l,url_c,url_m,media")).getJSONObject("photoset");
+            "page",Integer.toString(page),"per_page",Integer.toString(perPage),"media","photos",
+            "extras","url_k,url_h,url_l,url_c,url_m,media,date_taken,date_upload")).getJSONObject("photoset");
     }
     String imageUrl(JSONObject photo) throws Exception {
         for(String size:new String[]{"url_k","url_h","url_l","url_c","url_m"}) {

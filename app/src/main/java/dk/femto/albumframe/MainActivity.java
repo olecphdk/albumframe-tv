@@ -25,6 +25,7 @@ import java.net.Inet4Address;
 import org.json.JSONObject;
 
 public final class MainActivity extends Activity {
+    private static final int SETTINGS_REQUEST=1;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private int scene;
     private boolean slideshow;
@@ -97,31 +98,18 @@ public final class MainActivity extends Activity {
         root.addView(title);
         String user=CredentialStore.user(this);
         TextView body = text(user.isEmpty()
-            ? UiText.text(MainActivity.this,"0.6.1 • Connect Flickr using your phone, then choose an album.")
+            ? UiText.text(MainActivity.this,"Open Settings to connect Flickr using your phone.")
             : UiText.text(MainActivity.this,"Flickr login saved: ") + user + UiText.text(MainActivity.this,". Choose an album to start the slideshow."), 20, 0xFFB9C8C3);
         body.setMaxWidth(1050);
         body.setPadding(0, 0, 0, 30);
         root.addView(body);
 
-        LinearLayout actions = new LinearLayout(this);
-        actions.setOrientation(LinearLayout.HORIZONTAL);
         Button demo = button(user.isEmpty()?UiText.text(MainActivity.this,"Start demo slideshow"):UiText.text(MainActivity.this,"Choose album"), v -> {
             if(user.isEmpty()) showSlideshow();
             else startActivity(new android.content.Intent(this,AlbumActivity.class));
         });
-        Button login = button(UiText.text(MainActivity.this,"Connect Flickr"), v -> showPairing());
-        actions.addView(demo, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        LinearLayout.LayoutParams second = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        second.setMargins(20, 0, 0, 0);
-        actions.addView(login, second);
-        root.addView(actions);
-        root.addView(button(UiText.text(this,"Settings"),v->startActivity(new android.content.Intent(this,SettingsActivity.class))));
-        if(!user.isEmpty()) root.addView(button(UiText.text(MainActivity.this,"Delete local login"),v -> AppAppearance.dialog(this)
-            .setMessage(UiText.text(MainActivity.this,"Delete keys and login from this TV? Flickr access is not automatically revoked."))
-            .setNegativeButton(UiText.text(MainActivity.this,"Cancel"),null).setPositiveButton(UiText.text(MainActivity.this,"Delete"),(d,w)->{
-                try { CredentialStore.clear(this); showHome(); }
-                catch(Exception e) { AppAppearance.dialog(this).setMessage(UiText.text(MainActivity.this,"Could not delete login.")).setPositiveButton("OK",null).show(); }
-            }).show()));
+        root.addView(demo,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,ViewGroup.LayoutParams.WRAP_CONTENT));
+        root.addView(button(UiText.text(this,"Settings"),v->startActivityForResult(new android.content.Intent(this,SettingsActivity.class),SETTINGS_REQUEST)));
 
         TextView hint = text(UiText.text(MainActivity.this,"Use the arrow keys and OK on your remote"), 16, 0xFF789089);
         hint.setPadding(0, 32, 0, 0);
@@ -132,6 +120,10 @@ public final class MainActivity extends Activity {
     }
 
     @Override protected void onResume(){super.onResume();if(!pairingVisible && !slideshow)showHome();}
+    @Override protected void onActivityResult(int requestCode,int resultCode,android.content.Intent data){
+        super.onActivityResult(requestCode,resultCode,data);
+        if(requestCode==SETTINGS_REQUEST && resultCode==SettingsActivity.RESULT_CONNECT_FLICKR)showPairing();
+    }
     private void showPairing() {
         stopPairing();
         pairingVisible=true;

@@ -1,8 +1,8 @@
-# AlbumFrame TV 0.6.0
+# AlbumFrame TV 0.6.1
 
 Open-source Android TV app for showing Flickr albums, including private photos authorized by the user's account. Package `dk.femto.albumframe`; GPL-3.0-or-later. No tracking, ads or third-party runtime libraries.
 
-Version 0.6.0 adopts the permanent AlbumFrame TV name and an application ID derived from the publisher-owned `femto.dk` domain. Because the application ID changed before public release, it installs separately from all 0.5.x test builds and needs a new Flickr login. It retains the 0.5.2 security hardening and signing certificate.
+Version 0.6.1 completes the AlbumFrame TV rename by updating the Android TV launcher banner. The application ID remains derived from the publisher-owned `femto.dk` domain. Because that ID changed in 0.6.0 before public release, 0.6.x installs separately from all 0.5.x test builds and needs a new Flickr login. It retains the 0.5.2 security hardening and signing certificate.
 
 Canonical source: <https://github.com/olecphdk/albumframe-tv>
 
@@ -38,7 +38,7 @@ The direct build script uses aapt2, javac, d8 and zipalign. Sign `build/direct/A
 
 The `tests` folder includes desktop tests for OAuth signatures, QR generation, local TLS/CSRF/session behavior, authenticated owner lookup, album and photo pagination, private-photo parameters, image URL validation, size fallback, empty albums and expired credentials. Run tests against Android 35 stubs; FlickrTest additionally needs org.json 20240303 at runtime ahead of android.jar.
 
-This release is compiled with the included direct build script. Gradle plugin download was unavailable, so Gradle lint did not run. APK signature and launcher manifest are verified after building. The former 0.5.x package was tested successfully with a real Flickr account on a Google TV Streamer. AlbumFrame TV 0.6.0 still requires a clean-install device test before public distribution.
+This release is compiled with the included direct build script. Gradle plugin download was unavailable, so Gradle lint did not run. APK signature and launcher manifest are verified after building. AlbumFrame TV 0.6.0 was tested successfully with a real Flickr account on a Google TV Streamer; 0.6.1 is an in-place launcher-banner correction that still needs a device check before public distribution.
 
 LOGIN-TEST.md describes the historical 0.2.1 login-only release; this version adds album viewing.
 
@@ -56,6 +56,6 @@ SlideshowClockTest checks automatic advancement, pause during download, resume, 
 
 ## Version history
 
-The repository contains reconstructed, tagged OpenFrame snapshots for 0.3.0, 0.3.1 and 0.4.0, followed by normal 0.5.x development commits and the AlbumFrame TV rename in 0.6.0.
+The repository contains reconstructed, tagged OpenFrame snapshots for 0.3.0, 0.3.1 and 0.4.0, followed by normal 0.5.x development commits and the AlbumFrame TV rename in 0.6.x.
 
 See [CHANGELOG.md](CHANGELOG.md) for release notes and [RELEASE-CHECKLIST.md](RELEASE-CHECKLIST.md) for the remaining public-store work.

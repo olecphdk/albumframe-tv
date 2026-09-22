@@ -97,7 +97,7 @@ public final class MainActivity extends Activity {
         root.addView(title);
         String user=CredentialStore.user(this);
         TextView body = text(user.isEmpty()
-            ? UiText.text(MainActivity.this,"0.6.0 • Connect Flickr using your phone, then choose an album.")
+            ? UiText.text(MainActivity.this,"0.6.1 • Connect Flickr using your phone, then choose an album.")
             : UiText.text(MainActivity.this,"Flickr login saved: ") + user + UiText.text(MainActivity.this,". Choose an album to start the slideshow."), 20, 0xFFB9C8C3);
         body.setMaxWidth(1050);
         body.setPadding(0, 0, 0, 30);

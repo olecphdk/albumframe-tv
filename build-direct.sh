@@ -16,7 +16,7 @@ import sys,xml.etree.ElementTree as E
 E.register_namespace('android','http://schemas.android.com/apk/res/android')
 a='{http://schemas.android.com/apk/res/android}'
 r=E.parse('app/src/main/AndroidManifest.xml').getroot()
-r.set('package','dk.femto.albumframe');r.set(a+'versionCode','7');r.set(a+'versionName','0.6.0')
+r.set('package','dk.femto.albumframe');r.set(a+'versionCode','8');r.set(a+'versionName','0.6.1')
 E.SubElement(r,'uses-sdk',{a+'minSdkVersion':'28',a+'targetSdkVersion':'35'})
 for e in r.iter():
  n=e.get(a+'name','')

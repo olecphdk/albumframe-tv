@@ -38,7 +38,7 @@ public final class SettingsActivity extends Activity {
         privacy.setPadding(0,dp(18),0,0);root.addView(privacy);
         TextView attribution=text("This product uses the Flickr API but is not endorsed or certified by SmugMug, Inc.",14,0xFFB9C8C3);
         attribution.setPadding(0,dp(12),0,dp(8));root.addView(attribution);
-        TextView version=text("AlbumFrame TV 0.6.0",14,0xFF83918D);
+        TextView version=text("AlbumFrame TV 0.6.1",14,0xFF83918D);
         version.setPadding(0,0,0,dp(18));root.addView(version);
         ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.addView(root);setContentView(AppAppearance.menu(this,scroll));back.requestFocus();
     }

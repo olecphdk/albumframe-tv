@@ -2,6 +2,11 @@
 
 All notable user-visible and security-relevant changes are recorded here.
 
+## 0.6.1 — 2026-09-21
+
+- Replace the old OpenFrame Albums launcher banner with AlbumFrame TV branding.
+- Keep the package name and signing identity unchanged for an in-place update from 0.6.0.
+
 ## 0.6.0 — 2026-09-21
 
 - Rename the app from OpenFrame Albums to AlbumFrame TV.

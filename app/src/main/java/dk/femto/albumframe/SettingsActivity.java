@@ -48,7 +48,7 @@ public final class SettingsActivity extends Activity {
         });
         root.addView(clockButton);
         boolean motion=getSharedPreferences("slideshow",0).getBoolean("ken_burns",false);
-        root.addView(button(UiText.text(this,"Gentle photo motion")+": "+UiText.text(this,motion?"On":"Off"),()->{
+        root.addView(button(UiText.text(this,"Ken Burns effect")+": "+UiText.text(this,motion?"On":"Off"),()->{
             getSharedPreferences("slideshow",0).edit().putBoolean("ken_burns",!motion).apply();showSettings();
         }));
         boolean fill=getSharedPreferences("slideshow",0).getBoolean("fill_screen",false);

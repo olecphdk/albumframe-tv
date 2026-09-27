@@ -1,8 +1,8 @@
-# AlbumFrame TV 0.7.2
+# AlbumFrame TV
 
 Open-source Android TV app for showing Flickr albums, including private photos authorized by the user's account. Package `dk.femto.albumframe`; GPL-3.0-or-later. No tracking, ads or third-party runtime libraries.
 
-Version 0.7.2 adds an optional date and time display over the slideshow. The permanent application ID remains `dk.femto.albumframe`; this version installs over 0.6.x and 0.7.1 without another Flickr login. Builds before 0.6.0 have a different application ID and install separately.
+The current stable release is 0.8.1. The permanent application ID is `dk.femto.albumframe`; compatible releases install over 0.6.x and later without another Flickr login. Builds before 0.6.0 have a different application ID and install separately.
 
 Canonical source: <https://github.com/olecphdk/albumframe-tv>
 
@@ -40,7 +40,7 @@ The direct build script uses aapt2, javac, d8 and zipalign. Sign `build/direct/A
 
 The `tests` folder includes desktop tests for OAuth signatures, QR generation, local TLS/CSRF/session behavior, authenticated owner lookup, album and photo pagination, local photo ordering, private-photo parameters, image URL validation, size fallback, empty albums and expired credentials. Run all six suites with `ANDROID_HOME=/path/to/sdk JSON_JAR=/path/to/json-20240303.jar bash ./test.sh` (JDK 17). The script compiles against Android 35 stubs and supplies org.json before android.jar at runtime. Recovery tests use virtual time to cover initial outages, backoff, pause/resume, navigation and shutdown. GitHub Actions is configured to run the suites on pushes and pull requests; no real Flickr credentials or signing key are needed.
 
-This version is compiled with the included direct build script. Gradle plugin download was unavailable, so Gradle lint did not run. APK signature and launcher manifest are verified after building. Version 0.7.2 was tested successfully on a Google TV Streamer. Version 0.7.3 was also tested on Google TV Streamer, including unplugging and reconnecting Ethernet during playback. The recovery logic passes JVM tests; no 6–12 hour Android memory profile has been recorded. See `docs/ROBUSTNESS.md` for limits and the device test procedure.
+This version is compiled with the included direct build script. Gradle plugin download was unavailable, so Gradle lint did not run. APK signature and launcher manifest are verified after building. Version 0.8.1 was tested successfully on a Google TV Streamer, including the in-app GitHub update flow through download and Android installation. Earlier device testing also covered unplugging and reconnecting Ethernet during playback. The recovery logic passes JVM tests; no 6–12 hour Android memory profile has been recorded. See `docs/ROBUSTNESS.md` for limits and the device test procedure.
 
 LOGIN-TEST.md describes the historical 0.2.1 login-only release; this version adds album viewing.
 
@@ -62,8 +62,8 @@ The repository contains reconstructed, tagged OpenFrame snapshots for 0.3.0, 0.3
 
 See [CHANGELOG.md](CHANGELOG.md) for release notes and [RELEASE-CHECKLIST.md](RELEASE-CHECKLIST.md) for the remaining public-store work.
 
-## 0.8.0 release and updates
+## 0.8.x releases and updates
 
 Settings includes an optional **Ken Burns effect** and **Photo framing**. The default framing shows the entire photo; **Fill screen** crops to the TV's aspect ratio. Ken Burns defaults off. Settings also has **Check for updates**. The app checks once per day when opened, prompts for a newer stable GitHub release, downloads `AlbumFrame-TV.apk`, and hands it to Android's installer. The first installation from this source requires allowing AlbumFrame to install unknown apps. Updates always require confirmation.
 
-For future compatible releases, keep the original signing key in the four GitHub Actions secrets: `ALBUMFRAME_KEYSTORE_B64`, `ALBUMFRAME_STORE_PASSWORD`, `ALBUMFRAME_KEY_PASSWORD`, and `ALBUMFRAME_KEY_ALIAS`. The signed release workflow tests, compiles, signs and verifies the APK on a version tag, then uploads it to the GitHub release. Match the tag to both Gradle and `build-direct.sh`. Feature-branch pushes and manual runs produce short-lived signed test artifacts. The separate test workflow also checks compilation but does not publish an unsigned APK.
+For future compatible releases, keep the original signing key in the four GitHub Actions secrets: `ALBUMFRAME_KEYSTORE_B64`, `ALBUMFRAME_STORE_PASSWORD`, `ALBUMFRAME_KEY_PASSWORD`, and `ALBUMFRAME_KEY_ALIAS`. The signed release workflow tests, compiles, signs and verifies the APK on a version tag, then uploads it to the GitHub release. `app/build.gradle.kts` is the single source of truth for `versionCode` and `versionName`; `build-direct.sh` reads both values from it. Match the release tag (for example `v0.8.2`) to the Gradle `versionName`. Feature-branch pushes and manual runs produce short-lived signed test artifacts. The separate test workflow also checks compilation but does not publish an unsigned APK.

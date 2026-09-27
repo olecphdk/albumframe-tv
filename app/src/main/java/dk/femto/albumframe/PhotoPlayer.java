@@ -1,6 +1,8 @@
 package dk.femto.albumframe;
 
 import android.content.Context;
+import android.animation.ObjectAnimator;
+import android.animation.PropertyValuesHolder;
 import android.graphics.*;
 import android.graphics.drawable.BitmapDrawable;
 import android.os.*;
@@ -36,6 +38,7 @@ final class PhotoPlayer extends FrameLayout {
     private int total,index,generation,failures;
     private int prefetchedIndex=-1;
     private Bitmap prefetchedBitmap;
+    private ObjectAnimator photoMotion;
     private volatile HttpURLConnection connection;
     private volatile boolean closed;
     private boolean loading;
@@ -174,26 +177,31 @@ final class PhotoPlayer extends FrameLayout {
     private void crossfade(Bitmap bitmap,int requestGeneration,boolean revealControls){
         int transition=getContext().getSharedPreferences("slideshow",0).getInt("transition_ms",2500);
         currentImage.animate().cancel();previousImage.animate().cancel();
+        if(photoMotion!=null){photoMotion.cancel();photoMotion=null;}
         previousImage.setImageDrawable(currentImage.getDrawable());previousImage.setAlpha(1f);
         previousImage.setScaleX(currentImage.getScaleX());previousImage.setScaleY(currentImage.getScaleY());
         previousImage.setTranslationX(currentImage.getTranslationX());previousImage.setTranslationY(currentImage.getTranslationY());
-        previousImage.animate().scaleX(1f).scaleY(1f).translationX(0f).translationY(0f).setDuration(transition).start();
         currentImage.setImageBitmap(bitmap);
         currentImage.setScaleX(1f);currentImage.setScaleY(1f);
         currentImage.setTranslationX(0f);currentImage.setTranslationY(0f);
         boolean hasPrevious=previousImage.getDrawable()!=null;
         currentImage.setAlpha(hasPrevious?0f:1f);
+        if(motion){
+            float distance=Math.min(getWidth(),getHeight())*0.045f;
+            photoMotion=ObjectAnimator.ofPropertyValuesHolder(currentImage,
+                PropertyValuesHolder.ofFloat(View.SCALE_X,1f,1.18f),
+                PropertyValuesHolder.ofFloat(View.SCALE_Y,1f,1.18f),
+                PropertyValuesHolder.ofFloat(View.TRANSLATION_X,0f,(index%2==0?1:-1)*distance),
+                PropertyValuesHolder.ofFloat(View.TRANSLATION_Y,0f,(index%3==0?1:-1)*distance));
+            // The next photo arrives after the crossfade plus the selected display interval.
+            photoMotion.setDuration(transition+clock.seconds()*1000L);
+            photoMotion.setInterpolator(new android.view.animation.LinearInterpolator());
+            photoMotion.start();
+        }
         if(hasPrevious)previousImage.animate().alpha(0f).setDuration(transition).setInterpolator(new AccelerateDecelerateInterpolator()).start();
         currentImage.animate().alpha(1f).setDuration(hasPrevious?transition:0).setInterpolator(new AccelerateDecelerateInterpolator())
             .withEndAction(()->{
                 previousImage.setImageDrawable(null);previousImage.setAlpha(1f);
-                if(motion && !closed && requestGeneration==generation){
-                    long duration=Math.max(6000L,clock.seconds()*1000L);
-                    float distance=Math.min(getWidth(),getHeight())*0.045f;
-                    currentImage.animate().scaleX(1.18f).scaleY(1.18f)
-                        .translationX((index%2==0?1:-1)*distance).translationY((index%3==0?1:-1)*distance)
-                        .setDuration(duration).setInterpolator(new android.view.animation.LinearInterpolator()).start();
-                }
                 if(!closed && requestGeneration==generation){clock.displayed();if(revealControls)showControls();}
             }).start();
     }
@@ -264,6 +272,7 @@ final class PhotoPlayer extends FrameLayout {
     void close(){
         clock.close();closed=true;generation++;ui.removeCallbacksAndMessages(null);worker.shutdownNow();
         currentImage.animate().cancel();previousImage.animate().cancel();recyclePrefetch();
+        if(photoMotion!=null){photoMotion.cancel();photoMotion=null;}
         HttpURLConnection current=connection;if(current!=null)current.disconnect();
         currentImage.setImageDrawable(null);previousImage.setImageDrawable(null);
         // Worker-owned metadata dies with the player after its in-flight task exits.

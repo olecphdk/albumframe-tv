@@ -47,6 +47,14 @@ public final class SettingsActivity extends Activity {
             showSettings(false,true);
         });
         root.addView(clockButton);
+        boolean motion=getSharedPreferences("slideshow",0).getBoolean("ken_burns",false);
+        root.addView(button(UiText.text(this,"Gentle photo motion")+": "+UiText.text(this,motion?"On":"Off"),()->{
+            getSharedPreferences("slideshow",0).edit().putBoolean("ken_burns",!motion).apply();showSettings();
+        }));
+        boolean fill=getSharedPreferences("slideshow",0).getBoolean("fill_screen",false);
+        root.addView(button(UiText.text(this,"Photo framing")+": "+UiText.text(this,fill?"Fill screen":"Show entire photo"),()->{
+            getSharedPreferences("slideshow",0).edit().putBoolean("fill_screen",!fill).apply();showSettings();
+        }));
         String language=getSharedPreferences("appearance",0).getString("language","system");
         root.addView(button(UiText.text(this,"Language")+": "+languageLabel(language),this::chooseLanguage));
         if(AppAppearance.hasBackground(this))root.addView(button(UiText.text(this,"Remove background"),()->{
@@ -55,16 +63,38 @@ public final class SettingsActivity extends Activity {
         root.addView(button(UiText.text(this,"Restart albums from first photo"),()->{
             getSharedPreferences("positions",0).edit().clear().apply();Toast.makeText(this,UiText.text(this,"Saved positions cleared"),Toast.LENGTH_SHORT).show();
         }));
+        root.addView(button(UiText.text(this,"Check for updates"),()->checkUpdates(this,true)));
         TextView note=text(UiText.text(this,"The information bar hides automatically after four seconds. Press any slideshow key to show it again."),16,0xFFB9C8C3);
         note.setPadding(0,dp(20),0,0);root.addView(note);
         TextView privacy=text(UiText.text(this,"Privacy: The app connects directly to Flickr. The developer receives no credentials, photos, analytics or crash reports. Credentials are encrypted on this TV. Photos stay in memory, except a background you explicitly save."),14,0xFFB9C8C3);
         privacy.setPadding(0,dp(18),0,0);root.addView(privacy);
         TextView attribution=text("This product uses the Flickr API but is not endorsed or certified by SmugMug, Inc.",14,0xFFB9C8C3);
         attribution.setPadding(0,dp(12),0,dp(8));root.addView(attribution);
-        TextView version=text("AlbumFrame TV 0.7.2",14,0xFF83918D);
+        TextView version=text("AlbumFrame TV "+getPackageVersion(),14,0xFF83918D);
         version.setPadding(0,0,0,dp(18));root.addView(version);
         ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.addView(root);setContentView(AppAppearance.menu(this,scroll));
         (focusPhotoOrder?orderButton:focusClock?clockButton:back).requestFocus();
+    }
+    private String getPackageVersion(){try{return getPackageManager().getPackageInfo(getPackageName(),0).versionName;}catch(Exception error){return "";}}
+    static void checkUpdates(Activity activity,boolean manual){
+        UpdateChecker.check((release,error)->{
+            if(activity.isFinishing()||activity.isDestroyed())return;
+            if(error!=null){if(manual)Toast.makeText(activity,UiText.text(activity,"Update check failed. Try again later."),Toast.LENGTH_LONG).show();return;}
+            String installed="";
+            try{installed=activity.getPackageManager().getPackageInfo(activity.getPackageName(),0).versionName;}catch(Exception ignored){}
+            if(!UpdateChecker.newer(release.version,installed)){
+                if(manual)Toast.makeText(activity,UiText.text(activity,"You have the latest version."),Toast.LENGTH_SHORT).show();return;
+            }
+            AppAppearance.dialog(activity).setTitle(UiText.text(activity,"Update available")+" "+release.version)
+                .setMessage(release.notes.length()>400?release.notes.substring(0,400):release.notes)
+                .setNegativeButton(UiText.text(activity,"Later"),null)
+                .setPositiveButton(UiText.text(activity,"Update"),(dialog,which)->{
+                    Toast.makeText(activity,UiText.text(activity,"Downloading update…"),Toast.LENGTH_SHORT).show();
+                    UpdateChecker.install(activity,release,(unused,failure)->{
+                        if(failure!=null)Toast.makeText(activity,UiText.text(activity,failure.getMessage()),Toast.LENGTH_LONG).show();
+                    });
+                }).show();
+        });
     }
     private void choosePhotoOrder(){
         String current=PhotoOrder.normalize(getSharedPreferences("slideshow",0).getString("photo_order",PhotoOrder.FLICKR));

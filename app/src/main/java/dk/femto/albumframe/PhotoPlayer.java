@@ -22,6 +22,7 @@ final class PhotoPlayer extends FrameLayout {
     private final ThreadPoolExecutor worker=new ThreadPoolExecutor(1,1,0,TimeUnit.SECONDS,new LinkedBlockingQueue<>());
     private final ImageView currentImage;
     private final ImageView previousImage;
+    private final boolean motion,fillScreen;
     private final TextView controls;
     private final SlideshowClock clock;
     private final String albumId,albumTitle;
@@ -52,6 +53,8 @@ final class PhotoPlayer extends FrameLayout {
         super(context);this.albumId=albumId;this.albumTitle=albumTitle;
         setBackgroundColor(Color.BLACK);
         photoOrder=PhotoOrder.normalize(context.getSharedPreferences("slideshow",0).getString("photo_order",PhotoOrder.FLICKR));
+        motion=context.getSharedPreferences("slideshow",0).getBoolean("ken_burns",false);
+        fillScreen=context.getSharedPreferences("slideshow",0).getBoolean("fill_screen",false);
         index=Math.max(0,context.getSharedPreferences("positions",0).getInt(albumId,0));
         clock=new SlideshowClock(new SlideshowClock.Scheduler(){
             public void cancel(Runnable runnable){ui.removeCallbacks(runnable);}
@@ -59,6 +62,8 @@ final class PhotoPlayer extends FrameLayout {
         },advance,context.getSharedPreferences("slideshow",0).getInt("seconds",4));
         previousImage=imageView(context);addView(previousImage,new FrameLayout.LayoutParams(-1,-1));
         currentImage=imageView(context);addView(currentImage,new FrameLayout.LayoutParams(-1,-1));
+        currentImage.setScaleType(fillScreen?ImageView.ScaleType.CENTER_CROP:ImageView.ScaleType.FIT_CENTER);
+        previousImage.setScaleType(currentImage.getScaleType());
         SlideshowDateTimeOverlay.addIfEnabled(this);
         controls=new TextView(context);controls.setTextColor(Color.WHITE);controls.setTextSize(17);
         controls.setPadding(24,12,24,12);controls.setBackgroundColor(0xB8000000);
@@ -170,13 +175,25 @@ final class PhotoPlayer extends FrameLayout {
         int transition=getContext().getSharedPreferences("slideshow",0).getInt("transition_ms",2500);
         currentImage.animate().cancel();previousImage.animate().cancel();
         previousImage.setImageDrawable(currentImage.getDrawable());previousImage.setAlpha(1f);
+        previousImage.setScaleX(currentImage.getScaleX());previousImage.setScaleY(currentImage.getScaleY());
+        previousImage.setTranslationX(currentImage.getTranslationX());previousImage.setTranslationY(currentImage.getTranslationY());
+        previousImage.animate().scaleX(1f).scaleY(1f).translationX(0f).translationY(0f).setDuration(transition).start();
         currentImage.setImageBitmap(bitmap);
+        currentImage.setScaleX(1f);currentImage.setScaleY(1f);
+        currentImage.setTranslationX(0f);currentImage.setTranslationY(0f);
         boolean hasPrevious=previousImage.getDrawable()!=null;
         currentImage.setAlpha(hasPrevious?0f:1f);
         if(hasPrevious)previousImage.animate().alpha(0f).setDuration(transition).setInterpolator(new AccelerateDecelerateInterpolator()).start();
         currentImage.animate().alpha(1f).setDuration(hasPrevious?transition:0).setInterpolator(new AccelerateDecelerateInterpolator())
             .withEndAction(()->{
                 previousImage.setImageDrawable(null);previousImage.setAlpha(1f);
+                if(motion && !closed && requestGeneration==generation){
+                    long duration=Math.max(12000L,clock.seconds()*4000L);
+                    float distance=Math.min(getWidth(),getHeight())*0.012f;
+                    currentImage.animate().scaleX(1.07f).scaleY(1.07f)
+                        .translationX((index%2==0?1:-1)*distance).translationY((index%3==0?1:-1)*distance)
+                        .setDuration(duration).setInterpolator(new android.view.animation.LinearInterpolator()).start();
+                }
                 if(!closed && requestGeneration==generation){clock.displayed();if(revealControls)showControls();}
             }).start();
     }

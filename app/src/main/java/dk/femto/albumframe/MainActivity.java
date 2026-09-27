@@ -55,6 +55,12 @@ public final class MainActivity extends Activity {
         super.onCreate(state);
         getWindow().setStatusBarColor(Color.TRANSPARENT);
         showHome();
+        long now=System.currentTimeMillis();
+        android.content.SharedPreferences updates=getSharedPreferences("updates",0);
+        if(now-updates.getLong("last_check",0)>24L*60*60*1000){
+            updates.edit().putLong("last_check",now).apply();
+            SettingsActivity.checkUpdates(this,false);
+        }
     }
 
     private TextView text(String value, float sp, int color) {

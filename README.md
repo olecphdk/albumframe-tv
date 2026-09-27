@@ -61,3 +61,9 @@ SlideshowClockTest checks automatic advancement, pause during download, resume, 
 The repository contains reconstructed, tagged OpenFrame snapshots for 0.3.0, 0.3.1 and 0.4.0, followed by normal 0.5.x development commits and the AlbumFrame TV rename in 0.6.x.
 
 See [CHANGELOG.md](CHANGELOG.md) for release notes and [RELEASE-CHECKLIST.md](RELEASE-CHECKLIST.md) for the remaining public-store work.
+
+## 0.8.0 development and release
+
+Settings has optional **Gentle photo motion** and **Photo framing**. The default framing shows the entire photo; **Fill screen** crops to the TV's aspect ratio. Motion is deliberately subtle and defaults off. Settings also has **Check for updates**. The app checks once per day when opened, shows a prompt for a newer stable GitHub release, downloads `AlbumFrame-TV.apk`, and hands it to Android's installer. The first install from this source requires allowing AlbumFrame to install unknown apps. The app never silently installs an update.
+
+To create a compatible release, configure GitHub Actions secrets `ALBUMFRAME_KEYSTORE_B64` (base64 of the **original** signing keystore), `ALBUMFRAME_STORE_PASSWORD`, `ALBUMFRAME_KEY_PASSWORD`, and `ALBUMFRAME_KEY_ALIAS`. Never create a new signing key for an existing installation. The workflow tests and compiles on version tags, signs and verifies the APK, and creates a GitHub release. Match the tag (for example `v0.8.0`) to both Gradle and `build-direct.sh`. A manual workflow run yields a private workflow artifact, without publishing a release. Test the signed build on the TV before tagging a public release.

@@ -22,9 +22,3 @@ jobs:
       - name: Build unsigned APK
         shell: bash
         run: JAVA_HOME="$JAVA_HOME_17_X64" bash ./build-direct.sh
-      - name: Save test APK
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: AlbumFrame-TV-unsigned
-          path: build/direct/AlbumFrame-TV-unsigned.apk
-          retention-days: 7

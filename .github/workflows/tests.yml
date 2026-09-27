@@ -1,4 +1,4 @@
-name: JVM regression tests
+name: Test and build APK
 on: [push, pull_request, workflow_dispatch]
 permissions:
   contents: read
@@ -13,9 +13,18 @@ jobs:
       - name: Prepare Android stubs and pinned JSON test dependency
         shell: bash
         run: |
-          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-35"
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-35" "build-tools;35.0.0"
           curl --fail --location --retry 3 -o "$RUNNER_TEMP/json.jar" https://repo.maven.apache.org/maven2/org/json/json/20240303/json-20240303.jar
           echo "3cf6cd6892e32e2b4c1c39e0f52f5248a2f5b37646fdfbb79a66b46b618414ed  $RUNNER_TEMP/json.jar" | sha256sum --check
       - name: Run offline tests
         shell: bash
         run: JAVA_HOME="$JAVA_HOME_17_X64" JSON_JAR="$RUNNER_TEMP/json.jar" bash ./test.sh
+      - name: Build unsigned APK
+        shell: bash
+        run: JAVA_HOME="$JAVA_HOME_17_X64" bash ./build-direct.sh
+      - name: Save test APK
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: AlbumFrame-TV-unsigned
+          path: build/direct/AlbumFrame-TV-unsigned.apk
+          retention-days: 7

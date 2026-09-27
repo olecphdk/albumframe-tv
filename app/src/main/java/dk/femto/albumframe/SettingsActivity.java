@@ -17,9 +17,8 @@ public final class SettingsActivity extends Activity {
         button.setPadding(dp(18),dp(10),dp(18),dp(10));button.setOnClickListener(view->action.run());AppAppearance.styleButton(button);return button;
     }
     @Override protected void onCreate(Bundle state){super.onCreate(state);showSettings();}
-    private void showSettings(){showSettings(false);}
-    private void showSettings(boolean focusPhotoOrder){showSettings(focusPhotoOrder,false);}
-    private void showSettings(boolean focusPhotoOrder,boolean focusClock){
+    private void showSettings(){showSettings(null);}
+    private void showSettings(String focusKey){
         LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setPadding(dp(48),dp(32),dp(48),dp(32));
         TextView title=text(UiText.text(this,"Settings"),30,Color.WHITE);title.setPadding(0,0,0,dp(16));root.addView(title);
         Button back=button(UiText.text(this,"Back"),this::finish);root.addView(back);
@@ -48,13 +47,13 @@ public final class SettingsActivity extends Activity {
         });
         root.addView(clockButton);
         boolean motion=getSharedPreferences("slideshow",0).getBoolean("ken_burns",false);
-        root.addView(button(UiText.text(this,"Ken Burns effect")+": "+UiText.text(this,motion?"On":"Off"),()->{
-            getSharedPreferences("slideshow",0).edit().putBoolean("ken_burns",!motion).apply();showSettings();
-        }));
+        Button motionButton=button(UiText.text(this,"Ken Burns effect")+": "+UiText.text(this,motion?"On":"Off"),()->{
+            getSharedPreferences("slideshow",0).edit().putBoolean("ken_burns",!motion).apply();showSettings("motion");
+        }); root.addView(motionButton);
         boolean fill=getSharedPreferences("slideshow",0).getBoolean("fill_screen",false);
-        root.addView(button(UiText.text(this,"Photo framing")+": "+UiText.text(this,fill?"Fill screen":"Show entire photo"),()->{
-            getSharedPreferences("slideshow",0).edit().putBoolean("fill_screen",!fill).apply();showSettings();
-        }));
+        Button framingButton=button(UiText.text(this,"Photo framing")+": "+UiText.text(this,fill?"Fill screen":"Show entire photo"),()->{
+            getSharedPreferences("slideshow",0).edit().putBoolean("fill_screen",!fill).apply();showSettings("framing");
+        }); root.addView(framingButton);
         String language=getSharedPreferences("appearance",0).getString("language","system");
         Button languageButton=button(UiText.text(this,"Language")+": "+languageLabel(language),this::chooseLanguage); root.addView(languageButton);
         if(AppAppearance.hasBackground(this))root.addView(button(UiText.text(this,"Remove background"),()->{

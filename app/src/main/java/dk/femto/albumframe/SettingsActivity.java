@@ -38,13 +38,13 @@ public final class SettingsActivity extends Activity {
         Button orderButton=button(UiText.text(this,"Photo order")+": "+orderLabel(order),this::choosePhotoOrder);
         root.addView(orderButton);
         int seconds=getSharedPreferences("slideshow",0).getInt("seconds",4);
-        root.addView(button(UiText.text(this,"Time between photos")+": "+seconds+UiText.text(this," seconds"),this::chooseInterval));
+        Button intervalButton=button(UiText.text(this,"Time between photos")+": "+seconds+UiText.text(this," seconds"),this::chooseInterval); root.addView(intervalButton);
         int transition=getSharedPreferences("slideshow",0).getInt("transition_ms",2500);
-        root.addView(button(UiText.text(this,"Photo transition")+": "+transitionLabel(transition),this::chooseTransition));
+        Button transitionButton=button(UiText.text(this,"Photo transition")+": "+transitionLabel(transition),this::chooseTransition); root.addView(transitionButton);
         boolean showClock=getSharedPreferences("slideshow",0).getBoolean("show_date_time",true);
         Button clockButton=button(UiText.text(this,"Show date and time")+": "+UiText.text(this,showClock?"On":"Off"),()->{
             getSharedPreferences("slideshow",0).edit().putBoolean("show_date_time",!showClock).apply();
-            showSettings(false,true);
+            showSettings("clock");
         });
         root.addView(clockButton);
         boolean motion=getSharedPreferences("slideshow",0).getBoolean("ken_burns",false);
@@ -56,7 +56,7 @@ public final class SettingsActivity extends Activity {
             getSharedPreferences("slideshow",0).edit().putBoolean("fill_screen",!fill).apply();showSettings();
         }));
         String language=getSharedPreferences("appearance",0).getString("language","system");
-        root.addView(button(UiText.text(this,"Language")+": "+languageLabel(language),this::chooseLanguage));
+        Button languageButton=button(UiText.text(this,"Language")+": "+languageLabel(language),this::chooseLanguage); root.addView(languageButton);
         if(AppAppearance.hasBackground(this))root.addView(button(UiText.text(this,"Remove background"),()->{
             AppAppearance.removeBackground(this);Toast.makeText(this,UiText.text(this,"Background removed"),Toast.LENGTH_SHORT).show();showSettings();
         }));
@@ -73,7 +73,15 @@ public final class SettingsActivity extends Activity {
         TextView version=text("AlbumFrame TV "+getPackageVersion(),14,0xFF83918D);
         version.setPadding(0,0,0,dp(18));root.addView(version);
         ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.addView(root);setContentView(AppAppearance.menu(this,scroll));
-        (focusPhotoOrder?orderButton:focusClock?clockButton:back).requestFocus();
+        Button focusTarget=back;
+        if("order".equals(focusKey))focusTarget=orderButton;
+        else if("interval".equals(focusKey))focusTarget=intervalButton;
+        else if("transition".equals(focusKey))focusTarget=transitionButton;
+        else if("clock".equals(focusKey))focusTarget=clockButton;
+        else if("motion".equals(focusKey))focusTarget=motionButton;
+        else if("framing".equals(focusKey))focusTarget=framingButton;
+        else if("language".equals(focusKey))focusTarget=languageButton;
+        focusTarget.requestFocus();
     }
     private String getPackageVersion(){try{return getPackageManager().getPackageInfo(getPackageName(),0).versionName;}catch(Exception error){return "";}}
     static void checkUpdates(Activity activity,boolean manual){
@@ -110,7 +118,7 @@ public final class SettingsActivity extends Activity {
                 getSharedPreferences("positions",0).edit().clear().apply();
                 Toast.makeText(this,UiText.text(this,"Saved photo positions reset for the new order"),Toast.LENGTH_SHORT).show();
             }
-            dialog.dismiss();showSettings(true);
+            dialog.dismiss();showSettings("order");
         }).setNegativeButton(UiText.text(this,"Back"),null).show();
     }
     private String orderLabel(String order){
@@ -126,20 +134,20 @@ public final class SettingsActivity extends Activity {
         int[] values={1,2,4,8,16,32};String[] labels=new String[values.length];int current=getSharedPreferences("slideshow",0).getInt("seconds",4),selected=2;
         for(int index=0;index<values.length;index++){labels[index]=values[index]+UiText.text(this," seconds");if(values[index]==current)selected=index;}
         AppAppearance.dialog(this).setTitle(UiText.text(this,"Time between photos")).setSingleChoiceItems(labels,selected,(dialog,which)->{
-            getSharedPreferences("slideshow",0).edit().putInt("seconds",values[which]).apply();dialog.dismiss();showSettings();
+            getSharedPreferences("slideshow",0).edit().putInt("seconds",values[which]).apply();dialog.dismiss();showSettings("interval");
         }).setNegativeButton(UiText.text(this,"Back"),null).show();
     }
     private void chooseTransition(){
         int[] values={700,1400,2500};String[] labels={UiText.text(this,"Quick (0.7 seconds)"),UiText.text(this,"Soft (1.4 seconds)"),UiText.text(this,"Slow (2.5 seconds)")};
         int current=getSharedPreferences("slideshow",0).getInt("transition_ms",2500),selected=current==700?0:current==1400?1:2;
         AppAppearance.dialog(this).setTitle(UiText.text(this,"Photo transition")).setSingleChoiceItems(labels,selected,(dialog,which)->{
-            getSharedPreferences("slideshow",0).edit().putInt("transition_ms",values[which]).apply();dialog.dismiss();showSettings();
+            getSharedPreferences("slideshow",0).edit().putInt("transition_ms",values[which]).apply();dialog.dismiss();showSettings("transition");
         }).setNegativeButton(UiText.text(this,"Back"),null).show();
     }
     private void chooseLanguage(){
         String[] values={"system","da","en"};String current=getSharedPreferences("appearance",0).getString("language","system");int selected=Math.max(0,Arrays.asList(values).indexOf(current));
         AppAppearance.dialog(this).setTitle("Sprog / Language").setSingleChoiceItems(new String[]{UiText.text(this,"Follow TV language"),"Dansk","English"},selected,(dialog,which)->{
-            getSharedPreferences("appearance",0).edit().putString("language",values[which]).apply();dialog.dismiss();showSettings();
+            getSharedPreferences("appearance",0).edit().putString("language",values[which]).apply();dialog.dismiss();showSettings("language");
         }).setNegativeButton(UiText.text(this,"Back"),null).show();
     }
     private String transitionLabel(int milliseconds){return milliseconds==700?UiText.text(this,"Quick"):milliseconds==2500?UiText.text(this,"Slow"):UiText.text(this,"Soft");}

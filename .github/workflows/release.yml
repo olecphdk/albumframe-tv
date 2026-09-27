@@ -1,6 +1,7 @@
 name: Signed APK release
 on:
   push:
+    branches: ['feature/albumframe-0.8']
     tags: ['v*']
   workflow_dispatch:
 permissions:
@@ -62,8 +63,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release create "$GITHUB_REF_NAME" AlbumFrame-TV.apk --title "AlbumFrame TV $GITHUB_REF_NAME" --generate-notes --verify-tag
-      - name: Keep manual build as workflow artifact
-        if: github.event_name == 'workflow_dispatch'
+      - name: Keep test build as workflow artifact
+        if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/heads/feature/')
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: AlbumFrame-TV-signed

@@ -12,11 +12,16 @@ mkdir -p "$out/classes" "$out/dex" "$out/generated"
 find "$out/classes" "$out/dex" "$out/generated" -mindepth 1 -delete
 find "$out" -maxdepth 1 -type f \( -name '*.apk' -o -name '*.jar' -o -name '*.zip' -o -name 'AndroidManifest.xml' -o -name 'sources.txt' \) -delete
 python3 - "$out/AndroidManifest.xml" <<'PY'
-import sys,xml.etree.ElementTree as E
+import re,sys,xml.etree.ElementTree as E
 E.register_namespace('android','http://schemas.android.com/apk/res/android')
 a='{http://schemas.android.com/apk/res/android}'
+gradle=open('app/build.gradle.kts',encoding='utf-8').read()
+version_code=re.search(r'\bversionCode\s*=\s*(\d+)',gradle)
+version_name=re.search(r'\bversionName\s*=\s*"([^"]+)"',gradle)
+if not version_code or not version_name:
+    raise SystemExit('Could not read version from app/build.gradle.kts')
 r=E.parse('app/src/main/AndroidManifest.xml').getroot()
-r.set('package','dk.femto.albumframe');r.set(a+'versionCode','14');r.set(a+'versionName','0.8.1')
+r.set('package','dk.femto.albumframe');r.set(a+'versionCode',version_code.group(1));r.set(a+'versionName',version_name.group(1))
 E.SubElement(r,'uses-sdk',{a+'minSdkVersion':'28',a+'targetSdkVersion':'35'})
 for e in r.iter():
  n=e.get(a+'name','')

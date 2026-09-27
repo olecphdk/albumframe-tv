@@ -188,9 +188,9 @@ final class PhotoPlayer extends FrameLayout {
             .withEndAction(()->{
                 previousImage.setImageDrawable(null);previousImage.setAlpha(1f);
                 if(motion && !closed && requestGeneration==generation){
-                    long duration=Math.max(12000L,clock.seconds()*4000L);
-                    float distance=Math.min(getWidth(),getHeight())*0.012f;
-                    currentImage.animate().scaleX(1.07f).scaleY(1.07f)
+                    long duration=Math.max(6000L,clock.seconds()*1000L);
+                    float distance=Math.min(getWidth(),getHeight())*0.045f;
+                    currentImage.animate().scaleX(1.18f).scaleY(1.18f)
                         .translationX((index%2==0?1:-1)*distance).translationY((index%3==0?1:-1)*distance)
                         .setDuration(duration).setInterpolator(new android.view.animation.LinearInterpolator()).start();
                 }

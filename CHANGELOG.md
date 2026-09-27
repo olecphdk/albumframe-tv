@@ -2,6 +2,13 @@
 
 All notable user-visible and security-relevant changes are recorded here.
 
+## 0.8.0 — 2026-09-27
+
+- Add an optional Ken Burns effect with slow zoom and panning; defaults off. Improve movement across photo transitions after TV testing.
+- Add optional full-screen cropping; the default still shows the entire photo.
+- Check for new stable GitHub releases daily or on demand, then let Android install the signed APK with user confirmation.
+- Build and verify signed APKs in GitHub Actions for release tags and feature-branch testing.
+
 ## 0.7.3 — 2026-09-23
 
 - Retry temporary connection failures and Flickr outages with a 5–60 second backoff, including failure on the first photo. Keep the last displayed image while retrying.
@@ -59,9 +66,3 @@ All notable user-visible and security-relevant changes are recorded here.
 
 Earlier reconstructed releases are available as Git tags `v0.3.0`, `v0.3.1` and `v0.4.0`.
 
-## 0.8.0 (in development)
-
-- Optional gentle motion during slideshow playback and optional full-screen cropping. Both default off; full-screen mode can crop photo edges.
-- Manual and daily GitHub release check. A newer signed APK downloads on demand and opens Android's installer; installation always needs user confirmation.
-- Tag-triggered signed APK workflow. A release requires the original signing key and four GitHub Actions secrets.
-- Existing recovery and resource bounds remain; extended TV memory testing is still pending.

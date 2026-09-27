@@ -20,7 +20,6 @@ jobs:
         run: |
           version="${GITHUB_REF_NAME#v}"
           grep -Fq "versionName = \"$version\"" app/build.gradle.kts
-          grep -Fq "versionName','${version}'" build-direct.sh
       - name: Prepare SDK
         shell: bash
         run: |

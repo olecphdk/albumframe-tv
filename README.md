@@ -38,9 +38,9 @@ The direct build script uses aapt2, javac, d8 and zipalign. Sign `build/direct/A
 
 ## Tests and status
 
-The `tests` folder includes desktop tests for OAuth signatures, QR generation, local TLS/CSRF/session behavior, authenticated owner lookup, album and photo pagination, local photo ordering, private-photo parameters, image URL validation, size fallback, empty albums and expired credentials. Run tests against Android 35 stubs; FlickrTest and PhotoOrderTest additionally need org.json 20240303 at runtime ahead of android.jar.
+The `tests` folder includes desktop tests for OAuth signatures, QR generation, local TLS/CSRF/session behavior, authenticated owner lookup, album and photo pagination, local photo ordering, private-photo parameters, image URL validation, size fallback, empty albums and expired credentials. Run all six suites with `ANDROID_HOME=/path/to/sdk JSON_JAR=/path/to/json-20240303.jar bash ./test.sh` (JDK 17). The script compiles against Android 35 stubs and supplies org.json before android.jar at runtime. Recovery tests use virtual time to cover initial outages, backoff, pause/resume, navigation and shutdown. GitHub Actions is configured to run the suites on pushes and pull requests; no real Flickr credentials or signing key are needed.
 
-This version is compiled with the included direct build script. Gradle plugin download was unavailable, so Gradle lint did not run. APK signature and launcher manifest are verified after building. Version 0.7.1 was tested successfully on a Google TV Streamer; the new 0.7.2 clock overlay still needs a device check before a public release.
+This version is compiled with the included direct build script. Gradle plugin download was unavailable, so Gradle lint did not run. APK signature and launcher manifest are verified after building. Version 0.7.2 was tested successfully on a Google TV Streamer. Version 0.7.3 was also tested on Google TV Streamer, including unplugging and reconnecting Ethernet during playback. The recovery logic passes JVM tests; no 6–12 hour Android memory profile has been recorded. See `docs/ROBUSTNESS.md` for limits and the device test procedure.
 
 LOGIN-TEST.md describes the historical 0.2.1 login-only release; this version adds album viewing.
 

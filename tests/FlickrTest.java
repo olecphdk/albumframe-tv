@@ -42,6 +42,9 @@ public final class FlickrTest {
         FlickrApi expired=new FlickrApi(q->"{\"stat\":\"fail\",\"code\":98}");
         try{expired.albums(1);throw new AssertionError("expired token accepted");}
         catch(IOException e){check(e.getMessage().contains("Connect Flickr again"),"reconnect message");}
+        FlickrApi unavailable=new FlickrApi(q->"{\"stat\":\"fail\",\"code\":105}");
+        try{unavailable.albums(1);throw new AssertionError("outage accepted");}
+        catch(IOException e){check(NetworkFailure.retryable(e),"Flickr API outage retries even with HTTP 200");}
         System.out.println("PASS owner, pagination, covers, privacy, media, URLs, size fallback, empty albums, expired login");
     }
 }

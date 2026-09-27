@@ -2,6 +2,14 @@
 
 All notable user-visible and security-relevant changes are recorded here.
 
+## 0.7.3 — 2026-09-23
+
+- Retry temporary connection failures and Flickr outages with a 5–60 second backoff, including failure on the first photo. Keep the last displayed image while retrying.
+- Make pause, navigation and shutdown cancel recovery timers as well as normal advances.
+- Limit Flickr-order metadata to three pages, discard unused prefetches, and adapt decoded image size to the heap budget.
+- Release the held-photo reference after remote-control actions; clear stale queued album thumbnails.
+- Add an offline recovery regression suite, a repeatable test command and a GitHub Actions test workflow.
+
 ## 0.7.2 — 2026-09-22
 
 - Show the TV's date and time during slideshows, including the optional screensaver and demo. The clock follows the TV's locale, time zone and 12/24-hour setting.

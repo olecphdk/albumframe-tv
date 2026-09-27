@@ -23,6 +23,8 @@ final class FlickrApi {
         JSONObject reply=new JSONObject(transport.get(p));
         if(!"ok".equals(reply.optString("stat"))) {
             int code=reply.optInt("code");
+            // Flickr can report a temporary outage inside an HTTP 200 JSON reply.
+            if(code==105 || code==106)throw new NetworkFailure(503,"Flickr error "+code+". Try again later.");
             if(code==98 || code==99 || code==100) throw new IOException("Flickr login or API key is no longer valid. Connect Flickr again ("+code+").");
             throw new IOException("Flickr error "+code+". Try again later.");
         }

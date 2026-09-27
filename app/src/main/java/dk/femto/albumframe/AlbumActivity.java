@@ -12,11 +12,12 @@ import java.util.concurrent.*;
 /** D-pad friendly paged album picker, retaining Flickr's own album ordering. */
 public final class AlbumActivity extends Activity {
     private final ExecutorService worker=Executors.newSingleThreadExecutor();
-    private final ExecutorService thumbnailWorker=Executors.newFixedThreadPool(3);
+    private final ThreadPoolExecutor thumbnailWorker=(ThreadPoolExecutor)Executors.newFixedThreadPool(3);
     private FlickrApi api;
-    private int generation,page=1;
+    private volatile int generation;
+    private int page=1;
     private String selectedAlbumId="";
-    private boolean stopped;
+    private volatile boolean stopped;
     private PhotoPlayer player;
     @Override public void onCreate(Bundle b) {
         super.onCreate(b);
@@ -41,6 +42,7 @@ public final class AlbumActivity extends Activity {
         row.addView(item,new LinearLayout.LayoutParams(0,dp(68),1));
         String url=FlickrApi.albumCoverUrl(album);
         if(!url.isEmpty())thumbnailWorker.submit(()->{
+            if(stopped || current!=generation)return;
             try{
                 Bitmap bitmap=ThumbnailLoader.download(url);
                 runOnUiThread(()->{if(stopped || current!=generation)bitmap.recycle();else cover.setImageBitmap(bitmap);});
@@ -50,6 +52,7 @@ public final class AlbumActivity extends Activity {
         return item;
     }
     private void showAlbums(int requested) {
+        heldBitmap=null;thumbnailWorker.getQueue().clear();
         if(player!=null){player.close();player=null;}
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         page=requested;int current=++generation;
@@ -85,7 +88,7 @@ public final class AlbumActivity extends Activity {
         });
     }
     private void open(String id,String title) {
-        generation++;
+        generation++;thumbnailWorker.getQueue().clear();
         selectedAlbumId=id;
         getSharedPreferences("album",0).edit().putString("id",id).putString("title",title).apply();
         player=new PhotoPlayer(this,id,title);setContentView(player);
@@ -98,6 +101,7 @@ public final class AlbumActivity extends Activity {
     private void chooseBackground() {
         final PhotoPlayer target=player;
         final android.graphics.Bitmap bitmap=heldBitmap;
+        heldBitmap=null;
         if(bitmap==null){target.setPaused(wasPaused);Toast.makeText(this,UiText.text(this,"Wait for the photo to finish loading"),Toast.LENGTH_SHORT).show();return;}
         AppAppearance.dialog(this).setMessage(UiText.text(this,"Use this photo as the app background?"))
             .setPositiveButton(UiText.text(this,"Use background"),(dialog,which)->{
@@ -152,10 +156,11 @@ public final class AlbumActivity extends Activity {
                     }else player.togglePause();
                 }
             }
+            if(event.getAction()==KeyEvent.ACTION_UP)heldBitmap=null;
             return true;
         }
         return super.dispatchKeyEvent(event);
     }
-    @Override protected void onStop(){stopped=true;generation++;if(player!=null){player.close();player=null;}super.onStop();}
+    @Override protected void onStop(){stopped=true;generation++;heldBitmap=null;thumbnailWorker.getQueue().clear();if(player!=null){player.close();player=null;}super.onStop();}
     @Override protected void onDestroy(){worker.shutdownNow();thumbnailWorker.shutdownNow();super.onDestroy();}
 }

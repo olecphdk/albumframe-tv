@@ -1,0 +1,21 @@
+name: JVM regression tests
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Prepare Android stubs and pinned JSON test dependency
+        shell: bash
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-35"
+          curl --fail --location --retry 3 -o "$RUNNER_TEMP/json.jar" https://repo.maven.apache.org/maven2/org/json/json/20240303/json-20240303.jar
+          echo "3cf6cd6892e32e2b4c1c39e0f52f5248a2f5b37646fdfbb79a66b46b618414ed  $RUNNER_TEMP/json.jar" | sha256sum --check
+      - name: Run offline tests
+        shell: bash
+        run: JAVA_HOME="$JAVA_HOME_17_X64" JSON_JAR="$RUNNER_TEMP/json.jar" bash ./test.sh

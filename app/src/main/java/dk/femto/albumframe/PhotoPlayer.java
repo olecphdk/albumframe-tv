@@ -26,15 +26,20 @@ final class PhotoPlayer extends FrameLayout {
     private final SlideshowClock clock;
     private final String albumId,albumTitle;
     private final String photoOrder;
-    private final Map<Integer,JSONObject> pageCache=new HashMap<>();
+    // Only metadata for nearby pages is retained; access is confined to the worker.
+    private final Map<Integer,JSONObject> pageCache=new LinkedHashMap<Integer,JSONObject>(4,0.75f,true){
+        @Override protected boolean removeEldestEntry(Map.Entry<Integer,JSONObject> entry){return size()>3;}
+    };
     private List<JSONObject> orderedPhotos;
     private FlickrApi api;
     private int total,index,generation,failures;
     private int prefetchedIndex=-1;
     private Bitmap prefetchedBitmap;
     private volatile HttpURLConnection connection;
-    private boolean closed,loading;
+    private volatile boolean closed;
+    private boolean loading;
     private final Runnable advance=()->moveInternal(1,false);
+    private final Runnable retry=()->load(false);
     private final Runnable hideControls;
 
     private static final class LoadedPhoto {
@@ -99,18 +104,21 @@ final class PhotoPlayer extends FrameLayout {
         loading=true;clock.loading();controls.setText(albumTitle+UiText.text(getContext()," • Loading photo …"));if(reveal)showControls();
     }
     private void load(boolean revealControls){
+        if(closed)return;
         loadingStatus(revealControls);final int requestGeneration=++generation,requested=index;
         worker.getQueue().clear();
         if(prefetchedBitmap!=null && prefetchedIndex==requested){
             Bitmap ready=prefetchedBitmap;prefetchedBitmap=null;prefetchedIndex=-1;
             showLoaded(new LoadedPhoto(requested,total,ready),requestGeneration,revealControls);return;
         }
+        recyclePrefetch();
         worker.execute(()->{
             try{LoadedPhoto photo=loadPhoto(requested);ui.post(()->showLoaded(photo,requestGeneration,revealControls));}
             catch(Exception error){ui.post(()->showError(error,requestGeneration));}
         });
     }
     private LoadedPhoto loadPhoto(int requested) throws Exception{
+        if(closed || Thread.currentThread().isInterrupted())throw new InterruptedException();
         if(api==null)api=new FlickrApi(getContext());
         if(!PhotoOrder.FLICKR.equals(photoOrder)){
             if(orderedPhotos==null)loadOrderedPhotos();
@@ -138,7 +146,7 @@ final class PhotoPlayer extends FrameLayout {
         JSONObject first=api.photos(albumId,1,PAGE_SIZE);
         int pages=first.optInt("pages",1);
         for(int number=1;number<=pages;number++){
-            if(Thread.currentThread().isInterrupted())throw new InterruptedException();
+            if(closed || Thread.currentThread().isInterrupted())throw new InterruptedException();
             JSONObject result=number==1?first:api.photos(albumId,number,PAGE_SIZE);
             JSONArray pagePhotos=result.getJSONArray("photo");
             for(int offset=0;offset<pagePhotos.length();offset++)photos.add(pagePhotos.getJSONObject(offset));
@@ -153,9 +161,10 @@ final class PhotoPlayer extends FrameLayout {
     }
     private void showLoaded(LoadedPhoto photo,int requestGeneration,boolean revealControls){
         if(closed || requestGeneration!=generation){photo.bitmap.recycle();return;}
+        boolean recovered=failures>0;
         index=photo.index;total=photo.total;loading=false;failures=0;
         getContext().getSharedPreferences("positions",0).edit().putInt(albumId,index).apply();
-        crossfade(photo.bitmap,requestGeneration,revealControls);updateControls(false);preloadNext(requestGeneration);
+        crossfade(photo.bitmap,requestGeneration,revealControls || recovered);updateControls(false);preloadNext(requestGeneration);
     }
     private void crossfade(Bitmap bitmap,int requestGeneration,boolean revealControls){
         int transition=getContext().getSharedPreferences("slideshow",0).getInt("transition_ms",2500);
@@ -187,8 +196,12 @@ final class PhotoPlayer extends FrameLayout {
     private void showError(Exception error,int requestGeneration){
         if(closed || requestGeneration!=generation)return;
         loading=false;failures++;
-        controls.setText(UiText.error(getContext(),message(error))+UiText.text(getContext(),"  Press Right to try the next photo, or Back."));showControls();
-        if(!clock.paused() && failures<3 && total>1)ui.postDelayed(advance,5000);
+        if(NetworkFailure.retryable(error)){
+            controls.setText(UiText.error(getContext(),message(error))+UiText.text(getContext()," Retrying automatically. OK: pause/resume."));
+            showControls();ui.removeCallbacks(hideControls);clock.failed(retry);return;
+        }
+        controls.setText(UiText.error(getContext(),message(error))+UiText.text(getContext(),"  Press Right to try the next photo, or Back."));showControls();ui.removeCallbacks(hideControls);
+        if(failures<3 && total>1)clock.failed(advance);
     }
     static String message(Exception error){
         if(error instanceof SocketTimeoutException)return "The connection to Flickr timed out.";
@@ -204,12 +217,12 @@ final class PhotoPlayer extends FrameLayout {
             try{
                 int status=current.getResponseCode();
                 if(status>=300 && status<400 && redirect<3){url=new URL(new URL(url),current.getHeaderField("Location")).toString();continue;}
-                if(status!=200)throw new IOException(UiText.text(getContext(),"Could not download the photo (HTTP ")+status+").");
+                if(status!=200)throw new NetworkFailure(status,"Could not download the photo (HTTP "+status+").");
                 ByteArrayOutputStream output=new ByteArrayOutputStream();
                 try(InputStream input=current.getInputStream()){
                     byte[] buffer=new byte[8192];int count;
                     while((count=input.read(buffer))!=-1){
-                        if(Thread.currentThread().isInterrupted())throw new InterruptedException();
+                        if(closed || Thread.currentThread().isInterrupted())throw new InterruptedException();
                         if(output.size()+count>maximumBytes)throw new IOException(UiText.text(getContext(),"The photo file is too large (over 20 MB)."));
                         output.write(buffer,0,count);
                     }
@@ -220,6 +233,9 @@ final class PhotoPlayer extends FrameLayout {
         BitmapFactory.Options options=new BitmapFactory.Options();options.inJustDecodeBounds=true;
         BitmapFactory.decodeByteArray(bytes,0,bytes.length,options);
         if(options.outWidth<=0 || options.outHeight<=0)throw new IOException(UiText.text(getContext(),"Could not read the photo format."));
+        // Three decoded frames can coexist during a crossfade and prefetch.
+        // Reserve most of the heap for encoded data, UI, metadata and Android.
+        maximumPixels=Math.min(maximumPixels,Runtime.getRuntime().maxMemory()/48L);
         options.inSampleSize=1;
         while((long)(options.outWidth/options.inSampleSize)*(options.outHeight/options.inSampleSize)>maximumPixels)options.inSampleSize*=2;
         options.inJustDecodeBounds=false;
@@ -232,6 +248,7 @@ final class PhotoPlayer extends FrameLayout {
         clock.close();closed=true;generation++;ui.removeCallbacksAndMessages(null);worker.shutdownNow();
         currentImage.animate().cancel();previousImage.animate().cancel();recyclePrefetch();
         HttpURLConnection current=connection;if(current!=null)current.disconnect();
-        currentImage.setImageDrawable(null);previousImage.setImageDrawable(null);pageCache.clear();orderedPhotos=null;
+        currentImage.setImageDrawable(null);previousImage.setImageDrawable(null);
+        // Worker-owned metadata dies with the player after its in-flight task exits.
     }
 }

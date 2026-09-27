@@ -59,12 +59,13 @@ final class OAuth {
         c.setConnectTimeout(15000); c.setReadTimeout(15000);
         try {
             int status = c.getResponseCode();
-            if (status != 200) throw new IOException("Flickr HTTP " + status + ". Check the API key, secret, TV clock and callback.");
+            if (status != 200) throw new NetworkFailure(status,"Flickr HTTP " + status + ".");
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             int maximumBytes = "rest".equals(endpoint) ? 1024 * 1024 : 262144;
             try (InputStream in = c.getInputStream()) {
                 byte[] buf = new byte[4096]; int n;
                 while ((n = in.read(buf)) != -1) {
+                    if(Thread.currentThread().isInterrupted())throw new InterruptedException();
                     if (out.size() + n > maximumBytes) throw new IOException("Response is too large");
                     out.write(buf, 0, n);
                 }

@@ -93,7 +93,7 @@ public final class SettingsActivity extends Activity {
                 if(manual)Toast.makeText(activity,UiText.text(activity,"You have the latest version."),Toast.LENGTH_SHORT).show();return;
             }
             AppAppearance.dialog(activity).setTitle(UiText.text(activity,"Update available")+" "+release.version)
-                .setMessage(release.notes.length()>400?release.notes.substring(0,400):release.notes)
+                .setMessage(plainReleaseNotes(release.notes))
                 .setNegativeButton(UiText.text(activity,"Later"),null)
                 .setPositiveButton(UiText.text(activity,"Update"),(dialog,which)->{
                     Toast.makeText(activity,UiText.text(activity,"Downloading update…"),Toast.LENGTH_SHORT).show();
@@ -102,6 +102,16 @@ public final class SettingsActivity extends Activity {
                     });
                 }).show();
         });
+    }
+    private static String plainReleaseNotes(String notes){
+        if(notes==null||notes.isEmpty())return "";
+        String text=notes;
+        text=text.replace("**","").replace("__","").replace("`","");
+        text=text.replaceAll("(?m)^#{1,6}\\s*","");
+        text=text.replaceAll("\\[([^]]+)]\\(([^)]+)\\)","$1: $2");
+        text=text.replaceAll("(?m)^\\s*[-*+]\\s+","• ");
+        text=text.trim();
+        return text.length()>400?text.substring(0,400):text;
     }
     private void choosePhotoOrder(){
         String current=PhotoOrder.normalize(getSharedPreferences("slideshow",0).getString("photo_order",PhotoOrder.FLICKR));

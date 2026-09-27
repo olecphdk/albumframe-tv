@@ -1,6 +1,8 @@
 package dk.femto.albumframe;
 
 import android.content.Context;
+import android.animation.ObjectAnimator;
+import android.animation.PropertyValuesHolder;
 import android.graphics.*;
 import android.graphics.drawable.BitmapDrawable;
 import android.os.*;
@@ -22,6 +24,7 @@ final class PhotoPlayer extends FrameLayout {
     private final ThreadPoolExecutor worker=new ThreadPoolExecutor(1,1,0,TimeUnit.SECONDS,new LinkedBlockingQueue<>());
     private final ImageView currentImage;
     private final ImageView previousImage;
+    private final boolean motion,fillScreen;
     private final TextView controls;
     private final SlideshowClock clock;
     private final String albumId,albumTitle;
@@ -35,6 +38,7 @@ final class PhotoPlayer extends FrameLayout {
     private int total,index,generation,failures;
     private int prefetchedIndex=-1;
     private Bitmap prefetchedBitmap;
+    private ObjectAnimator photoMotion;
     private volatile HttpURLConnection connection;
     private volatile boolean closed;
     private boolean loading;
@@ -52,6 +56,8 @@ final class PhotoPlayer extends FrameLayout {
         super(context);this.albumId=albumId;this.albumTitle=albumTitle;
         setBackgroundColor(Color.BLACK);
         photoOrder=PhotoOrder.normalize(context.getSharedPreferences("slideshow",0).getString("photo_order",PhotoOrder.FLICKR));
+        motion=context.getSharedPreferences("slideshow",0).getBoolean("ken_burns",false);
+        fillScreen=context.getSharedPreferences("slideshow",0).getBoolean("fill_screen",false);
         index=Math.max(0,context.getSharedPreferences("positions",0).getInt(albumId,0));
         clock=new SlideshowClock(new SlideshowClock.Scheduler(){
             public void cancel(Runnable runnable){ui.removeCallbacks(runnable);}
@@ -59,6 +65,8 @@ final class PhotoPlayer extends FrameLayout {
         },advance,context.getSharedPreferences("slideshow",0).getInt("seconds",4));
         previousImage=imageView(context);addView(previousImage,new FrameLayout.LayoutParams(-1,-1));
         currentImage=imageView(context);addView(currentImage,new FrameLayout.LayoutParams(-1,-1));
+        currentImage.setScaleType(fillScreen?ImageView.ScaleType.CENTER_CROP:ImageView.ScaleType.FIT_CENTER);
+        previousImage.setScaleType(currentImage.getScaleType());
         SlideshowDateTimeOverlay.addIfEnabled(this);
         controls=new TextView(context);controls.setTextColor(Color.WHITE);controls.setTextSize(17);
         controls.setPadding(24,12,24,12);controls.setBackgroundColor(0xB8000000);
@@ -169,10 +177,27 @@ final class PhotoPlayer extends FrameLayout {
     private void crossfade(Bitmap bitmap,int requestGeneration,boolean revealControls){
         int transition=getContext().getSharedPreferences("slideshow",0).getInt("transition_ms",2500);
         currentImage.animate().cancel();previousImage.animate().cancel();
+        if(photoMotion!=null){photoMotion.cancel();photoMotion=null;}
         previousImage.setImageDrawable(currentImage.getDrawable());previousImage.setAlpha(1f);
+        previousImage.setScaleX(currentImage.getScaleX());previousImage.setScaleY(currentImage.getScaleY());
+        previousImage.setTranslationX(currentImage.getTranslationX());previousImage.setTranslationY(currentImage.getTranslationY());
         currentImage.setImageBitmap(bitmap);
+        currentImage.setScaleX(1f);currentImage.setScaleY(1f);
+        currentImage.setTranslationX(0f);currentImage.setTranslationY(0f);
         boolean hasPrevious=previousImage.getDrawable()!=null;
         currentImage.setAlpha(hasPrevious?0f:1f);
+        if(motion){
+            float distance=Math.min(getWidth(),getHeight())*0.045f;
+            photoMotion=ObjectAnimator.ofPropertyValuesHolder(currentImage,
+                PropertyValuesHolder.ofFloat(View.SCALE_X,1f,1.18f),
+                PropertyValuesHolder.ofFloat(View.SCALE_Y,1f,1.18f),
+                PropertyValuesHolder.ofFloat(View.TRANSLATION_X,0f,(index%2==0?1:-1)*distance),
+                PropertyValuesHolder.ofFloat(View.TRANSLATION_Y,0f,(index%3==0?1:-1)*distance));
+            // The next photo arrives after the crossfade plus the selected display interval.
+            photoMotion.setDuration(transition+clock.seconds()*1000L);
+            photoMotion.setInterpolator(new android.view.animation.LinearInterpolator());
+            photoMotion.start();
+        }
         if(hasPrevious)previousImage.animate().alpha(0f).setDuration(transition).setInterpolator(new AccelerateDecelerateInterpolator()).start();
         currentImage.animate().alpha(1f).setDuration(hasPrevious?transition:0).setInterpolator(new AccelerateDecelerateInterpolator())
             .withEndAction(()->{
@@ -247,6 +272,7 @@ final class PhotoPlayer extends FrameLayout {
     void close(){
         clock.close();closed=true;generation++;ui.removeCallbacksAndMessages(null);worker.shutdownNow();
         currentImage.animate().cancel();previousImage.animate().cancel();recyclePrefetch();
+        if(photoMotion!=null){photoMotion.cancel();photoMotion=null;}
         HttpURLConnection current=connection;if(current!=null)current.disconnect();
         currentImage.setImageDrawable(null);previousImage.setImageDrawable(null);
         // Worker-owned metadata dies with the player after its in-flight task exits.

@@ -58,3 +58,10 @@ All notable user-visible and security-relevant changes are recorded here.
 - Add long-press background selection and consolidated settings.
 
 Earlier reconstructed releases are available as Git tags `v0.3.0`, `v0.3.1` and `v0.4.0`.
+
+## 0.8.0 (in development)
+
+- Optional gentle motion during slideshow playback and optional full-screen cropping. Both default off; full-screen mode can crop photo edges.
+- Manual and daily GitHub release check. A newer signed APK downloads on demand and opens Android's installer; installation always needs user confirmation.
+- Tag-triggered signed APK workflow. A release requires the original signing key and four GitHub Actions secrets.
+- Existing recovery and resource bounds remain; extended TV memory testing is still pending.

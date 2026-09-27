@@ -1,0 +1,72 @@
+name: Signed APK release
+on:
+  push:
+    branches: ['feature/albumframe-0.8']
+    tags: ['v*']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Verify version matches tag
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          grep -Fq "versionName = \"$version\"" app/build.gradle.kts
+          grep -Fq "versionName','${version}'" build-direct.sh
+      - name: Prepare SDK
+        shell: bash
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-35" "build-tools;35.0.0"
+          curl --fail --location --retry 3 -o "$RUNNER_TEMP/json.jar" https://repo.maven.apache.org/maven2/org/json/json/20240303/json-20240303.jar
+          echo "3cf6cd6892e32e2b4c1c39e0f52f5248a2f5b37646fdfbb79a66b46b618414ed  $RUNNER_TEMP/json.jar" | sha256sum --check
+      - name: Test and compile
+        shell: bash
+        run: |
+          JAVA_HOME="$JAVA_HOME_17_X64" JSON_JAR="$RUNNER_TEMP/json.jar" bash ./test.sh
+          JAVA_HOME="$JAVA_HOME_17_X64" bash ./build-direct.sh
+      - name: Sign APK
+        env:
+          KEYSTORE_B64: ${{ secrets.ALBUMFRAME_KEYSTORE_B64 }}
+          STORE_PASSWORD: ${{ secrets.ALBUMFRAME_STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.ALBUMFRAME_KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ALBUMFRAME_KEY_ALIAS }}
+        shell: bash
+        run: |
+          test -n "$KEYSTORE_B64" && test -n "$STORE_PASSWORD" && test -n "$KEY_PASSWORD" && test -n "$KEY_ALIAS"
+          umask 077
+          python3 - "$RUNNER_TEMP/signing.jks" <<'PY'
+          import base64, binascii, os, sys
+          value=''.join(os.environ['KEYSTORE_B64'].lstrip('\ufeff').split())
+          try:
+              decoded=base64.b64decode(value, validate=True)
+              if len(value)!=4604 or len(decoded)!=3452: raise ValueError('Incorrect key length')
+          except (ValueError, binascii.Error):
+              print(f'Invalid signing key: {len(value)} Base64 characters (expected 4604). Copy the entire file again.',file=sys.stderr)
+              sys.exit(1)
+          with open(sys.argv[1],'wb') as output: output.write(decoded)
+          PY
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" sign --ks "$RUNNER_TEMP/signing.jks" --ks-key-alias "$KEY_ALIAS" --ks-pass env:STORE_PASSWORD --key-pass env:KEY_PASSWORD --out AlbumFrame-TV.apk build/direct/AlbumFrame-TV-unsigned.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose AlbumFrame-TV.apk
+          cert=$("$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs AlbumFrame-TV.apk | sed -n 's/^Signer #1 certificate SHA-256 digest: //p')
+          test "$cert" = '27b389ca05cbc281f60bd17edc9958a4eb3377c74d218ebf5054e5cf4e722e22'
+          rm -f "$RUNNER_TEMP/signing.jks"
+      - name: Publish tag release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" AlbumFrame-TV.apk --title "AlbumFrame TV $GITHUB_REF_NAME" --generate-notes --verify-tag
+      - name: Keep test build as workflow artifact
+        if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/heads/feature/')
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: AlbumFrame-TV-signed
+          path: AlbumFrame-TV.apk
+          retention-days: 7

@@ -30,7 +30,8 @@
 
 ## Every release
 
-- [ ] Update version code/name, README and changelog.
+- [ ] Update `versionCode` and `versionName` in `app/build.gradle.kts` (the single version source), plus README and changelog as needed.
+- [ ] Create a `v<version>` tag matching Gradle `versionName`; let the signed release workflow build, sign, verify and upload `AlbumFrame-TV.apk`.
 - [ ] Run all tests and translation coverage checks.
 - [ ] Inspect permissions, exported components and network-security settings.
 - [ ] Verify signature continuity and upgrade behavior.

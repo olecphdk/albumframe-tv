@@ -21,6 +21,8 @@ import android.graphics.Bitmap;
 import android.net.ConnectivityManager;
 import android.net.LinkAddress;
 import android.net.LinkProperties;
+import android.net.Network;
+import android.net.NetworkCapabilities;
 import java.net.Inet4Address;
 import org.json.JSONObject;
 
@@ -130,6 +132,77 @@ public final class MainActivity extends Activity {
         super.onActivityResult(requestCode,resultCode,data);
         if(requestCode==SETTINGS_REQUEST && resultCode==SettingsActivity.RESULT_CONNECT_FLICKR)showPairing();
     }
+    private static final class LocalNetworkInfo {
+        final String ip;
+        final String transport;
+        final String diagnostics;
+        LocalNetworkInfo(String ip,String transport,String diagnostics) {
+            this.ip=ip; this.transport=transport; this.diagnostics=diagnostics;
+        }
+    }
+
+    private static int localIpv4Score(Inet4Address address) {
+        if(address.isLoopbackAddress() || address.isMulticastAddress() || address.isAnyLocalAddress()) return 99;
+        if(address.isSiteLocalAddress()) return 0;
+        byte[] bytes=address.getAddress();
+        int first=bytes[0]&0xff, second=bytes[1]&0xff;
+        if(first==100 && second>=64 && second<=127) return 1; // Shared address space (CGNAT)
+        if(address.isLinkLocalAddress()) return 2;
+        return 99;
+    }
+
+    private static String transportName(NetworkCapabilities caps) {
+        if(caps==null) return "Unknown";
+        if(caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)) return "VPN";
+        if(caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)) return "Ethernet";
+        if(caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) return "Wi-Fi";
+        return "Other";
+    }
+
+    private LocalNetworkInfo findLocalNetwork(ConnectivityManager cm) {
+        Network active=cm.getActiveNetwork();
+        String bestIp=null, bestTransport=null;
+        int bestScore=Integer.MAX_VALUE;
+        StringBuilder diagnostics=new StringBuilder();
+
+        for(Network network:cm.getAllNetworks()) {
+            NetworkCapabilities caps=cm.getNetworkCapabilities(network);
+            LinkProperties links=cm.getLinkProperties(network);
+            String type=transportName(caps);
+
+            if(diagnostics.length()>0) diagnostics.append("; ");
+            diagnostics.append(type);
+            if(network.equals(active)) diagnostics.append(" (default)");
+            diagnostics.append(": ");
+
+            boolean foundIpv4=false;
+            if(links!=null) for(LinkAddress linkAddress:links.getLinkAddresses()) {
+                if(!(linkAddress.getAddress() instanceof Inet4Address)) continue;
+                Inet4Address ipv4=(Inet4Address)linkAddress.getAddress();
+                if(foundIpv4) diagnostics.append(", ");
+                diagnostics.append(ipv4.getHostAddress());
+                foundIpv4=true;
+
+                if(caps==null || caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)) continue;
+                boolean ethernet=caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET);
+                boolean wifi=caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI);
+                if(!ethernet && !wifi) continue;
+
+                int addressScore=localIpv4Score(ipv4);
+                if(addressScore>=99) continue;
+                int score=addressScore*10+(ethernet?0:1);
+                if(score<bestScore) {
+                    bestScore=score;
+                    bestIp=ipv4.getHostAddress();
+                    bestTransport=ethernet?"Ethernet":"Wi-Fi";
+                }
+            }
+            if(!foundIpv4) diagnostics.append("no IPv4");
+        }
+        if(diagnostics.length()==0) diagnostics.append("none");
+        return new LocalNetworkInfo(bestIp,bestTransport,diagnostics.toString());
+    }
+
     private void showPairing() {
         stopPairing();
         pairingVisible=true;
@@ -158,12 +231,11 @@ public final class MainActivity extends Activity {
         new Thread(()->{
             try {
                 ConnectivityManager cm=(ConnectivityManager)getSystemService(CONNECTIVITY_SERVICE);
-                LinkProperties links=cm.getLinkProperties(cm.getActiveNetwork());
-                String ip=null;
-                if(links!=null) for(LinkAddress a:links.getLinkAddresses())
-                    if(a.getAddress() instanceof Inet4Address && a.getAddress().isSiteLocalAddress()) { ip=a.getAddress().getHostAddress(); break; }
-                if(ip==null) throw new IllegalStateException(UiText.text(MainActivity.this,"No local IPv4 network. Connect Wi-Fi or Ethernet and disable any VPN."));
-                PairingServer server=new PairingServer(ip,value->UiText.text(MainActivity.this,value),UiText.language(this),new PairingServer.Listener(){
+                LocalNetworkInfo local=findLocalNetwork(cm);
+                if(local.ip==null) throw new IllegalStateException(
+                    UiText.text(MainActivity.this,"No usable local IPv4 on Ethernet or Wi-Fi. Connect the TV to your home network and disable any VPN.")
+                    +"\n"+UiText.text(MainActivity.this,"Detected networks: ")+local.diagnostics);
+                PairingServer server=new PairingServer(local.ip,value->UiText.text(MainActivity.this,value),UiText.language(this),new PairingServer.Listener(){
                     public void status(String message) { handler.post(()->{ if(generation==pairingGeneration) status.setText(message); }); }
                     public void complete(String key,String secret,String token,String tokenSecret,String response) throws Exception {
                         JSONObject json=new JSONObject(response);
@@ -188,7 +260,8 @@ public final class MainActivity extends Activity {
                     for(int dy=0;dy<8;dy++) for(int dx=0;dx<8;dx++) bitmap.setPixel((x+4)*8+dx,(y+4)*8+dy,Color.BLACK);
                 handler.post(()->{
                     if(generation!=pairingGeneration) { server.close(); return; }
-                    pairing=server; qr.setImageBitmap(bitmap); address.setText(server.url());
+                    pairing=server; qr.setImageBitmap(bitmap);
+                    address.setText(UiText.text(MainActivity.this,"Local network: ")+local.transport+" • "+local.ip+"\n"+server.url());
                     status.setText(UiText.text(MainActivity.this,"Waiting for your phone. The certificate warning applies only to the local TV page, not flickr.com."));
                     server.start();
                 });

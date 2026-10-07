@@ -2,6 +2,12 @@
 
 All notable user-visible and security-relevant changes are recorded here.
 
+## 0.8.2 — 2026-10-07
+
+- Fix Flickr pairing when a VPN remains Android's default network by selecting a usable physical Ethernet or Wi-Fi network and ignoring VPN transports.
+- Show the selected local network type and IPv4 address on the pairing screen.
+- Include detected network transports and IPv4 addresses in pairing errors to make network problems easier to diagnose.
+
 ## 0.8.0 — 2026-09-27
 
 - Add an optional Ken Burns effect with slow zoom and panning; defaults off. Improve movement across photo transitions after TV testing.
